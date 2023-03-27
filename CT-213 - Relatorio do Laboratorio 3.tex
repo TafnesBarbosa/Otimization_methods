@@ -1,9 +1,10 @@
 \documentclass[brazil, 12pt]{article}
-
 \usepackage[portuguese]{babel}
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage[dvips]{graphicx}
+\usepackage{amsmath}
+\usepackage{indentfirst}
 \usepackage{caption}
 \usepackage{subcaption}
 \usepackage[scale=0.8]{geometry} % Reduce document margins
@@ -23,7 +24,7 @@
 \begin{center}
 \textbf{Instituto Tecnológico de Aeronáutica - ITA} \\
 \textbf{Inteligência Artificial para Robótica Móvel - CT213} \\
-\textbf{Aluno}:     % ESCREVA SEU NOME AQUI
+\textbf{Aluno}: Tafnes Silva Barbosa     % ESCREVA SEU NOME AQUI
 \end{center}
 
 \begin{center}
@@ -36,16 +37,44 @@
 %       RELATÓRIO
 %-----------------------------------------------------------------------------------------------
 \section{Breve Explicação em Alto Nível da Implementação}
+Neste laboratório foram implementadas três tipos de otimização diferentes: descida do gradiente, \textit{hill climbing} e \textit{simulated annealing}.
 
 \subsection{Descida do Gradiente}
 %% Sugestão: cerca de meia página.
+A função de descida do gradiente foi implementada usando a seguinte relação de atualização:
+\begin{equation}
+	\boldsymbol{\theta}_{k+1}=\boldsymbol{\theta}_{k} - \alpha\frac{\partial J(\boldsymbol{\theta})}{\partial \boldsymbol{\theta}}
+\end{equation}onde $\frac{\partial J(\boldsymbol{\theta})}{\partial \boldsymbol{\theta}}$ é dado pela função \texttt{gradient\_function(theta)}. A cada atualização do valor de $\boldsymbol{\theta}$, o valor antigo é colocado dentro de um vetor contendo o histórico de valores.
+
+Foram usados como critérios de parada o número de iterações (para depois da milésima iteração) e o valor atual do custo da função (para quando menor que $10^{-10}$). A taxa de aprendizado usada foi de 0.1 e o chute inicial foi $$\boldsymbol{\theta}_{0}=\left[\begin{array}{c}
+	v_{0}\\
+	f
+\end{array}\right]=\left[\begin{array}{c}
+0\\
+0
+\end{array}\right]$$
 
 \subsection{\emph{Hill Climbing}}
 %% Sugestão: cerca de meia página.
+Usou-se uma estratégia 8-conectada para os vizinhos de um certo $\boldsymbol{\theta}$. Uma função \texttt{neighbors (theta)} foi implementada para retornar os 8 vizinhos de $\boldsymbol{\theta}$, igualmente distribuídos ao seu redor. Cada vizinho estava a uma distância euclidiana de $\Delta = 2\cdot 10^{-3}$ e o ângulo entre cada vizinho era de 45°. A equação abaixo mostra como cada vizinho foi encontrado:
+$$\boldsymbol{vizinho} = \left[\begin{array}{c}
+	\theta[0] + \Delta \cdot \cos(\gamma)\\
+	\theta[1] + \Delta \cdot \sin(\gamma)
+\end{array}\right]$$onde $\gamma\in[0:7]\cdot\pi/4$.
+
+A partir dos vizinhos, a função de atualização de $\boldsymbol{\theta}$ foi implementada com os mesmos critérios de parada da descida de gradiente (número de iterações e o valor do custo atual). A cada iteração, checa-se qual vizinho de $\boldsymbol{\theta}$ tem um custo menor entre ele. Depois verifica se o menor custo encontrado é menor que o custo do $\boldsymbol{\theta}$ atual. Caso, ele não encontre vizinhos com custo menor que o atual, ele finaliza a atualização, pois chegou a um mínimo local. Caso ele encontre algum vizinho com custo menor, ele atualiza o $\boldsymbol{\theta}$ e coloca o valor do anterior no vetor contendo o histórico.
+
+Na implementação deste código, foi usada uma variável para guardar o melhor custo atual, dado que o melhor foi iniciado como \texttt{None} e a função de custo não foi programada para retornar infinito para \texttt{None}.
 
 \subsection{\emph{Simulated Annealing}}
 %% Sugestão: cerca de meia página.
-
+Para este tipo de atualização, foram implementadas 3 funções:
+\begin{enumerate}
+	\item Uma que escolhe um vizinho aleatório a uma distância $\Delta$ da mesma forma que os vizinhos do \textit{hill climbing} foram escolhidos, mas com o ângulo $\gamma$ aleatório uniformemente distribuído entre $(-\pi, \pi)$; 
+	\item Uma função que atualiza o \textit{schedule} ($T$) para uma dada iteração ($i$) a partir da equação$$T=\frac{T_{0}}{1+\beta i^{2}},$$onde $T_{0}=1$ e $\beta=1$; 
+	\item A função que atualiza o valor de $\boldsymbol{\theta}$ usa os mesmos critérios de parada da descida de gradiente (número de iterações e valor do custo atual) com um critério adicional caso o \textit{schedule} seja negativo (no caso do \textit{schedule} e constantes usados nesse laboratório, nunca haverá um valor negativo para ele). Mas, diferentemente do \textit{hill climbing}, ele não para caso não encontre um vizinho com custo menor. Ao escolher um vizinho aleatoriamente, ele atualiza o custo e coloca o anterior no histórico caso o custo do vizinho seja menor que o atual, mas caso não seja, ele escolhe um número aleatória e uniformemente ($r$) entre 0 e 1 e atualiza o valor atual e coloca o anterior no histórico, caso a comparação conforme à seguinte equação seja verdadeira:
+	$$r\leq e^{\frac{-\Delta E}{T}}$$onde $\Delta E=J(\boldsymbol{vizinho})-J(\boldsymbol{\theta})$ e $J$ é a função de custo. Conforme $T$ cresce, menor é a chance de a comparação acima ser verdadeira, pois o valor da exponencial cai. No caso do \textit{schedule} usado, vai cair mais rápido, pelo fato do denominador ser proporcional ao quadrado do número da iteração, se comparado com um dos apresentados em aula. Ou seja, quanto mais iterações, menor a chance de pegar um vizinho com custo maior que o atual, dado que, com o tempo, o $\Delta E$ ``diminua'', considerando o funcionamento da \textit{simulated annealing}.
+\end{enumerate}
 
 
 \section{Figuras Comprovando Funcionamento do Código}
@@ -55,7 +84,7 @@
 \begin{figure}[H]
 \centering
 \includegraphics[width=1\textwidth]{results/gradient_descent.eps} % caminho até a figura "teste.png"
-\caption{.} % legenda da figura
+\caption{Caminho percorrido pelo método de otimização: Descida do Gradiente.} % legenda da figura
 \label{fig:gradient_descent}  % label da figura. ex: \label{fig:test}
 \end{figure} 
 
@@ -64,7 +93,7 @@
 \begin{figure}[H]
 	\centering
 	\includegraphics[width=1\textwidth]{results/hill_climbing.eps} % caminho até a figura "teste.png"
-	\caption{.} % legenda da figura
+	\caption{Caminho percorrido pelo método de otimização: \textit{Hill Climbing}.} % legenda da figura
 	\label{fig:hill_climbing}  % label da figura. ex: \label{fig:test}
 \end{figure}
 
@@ -73,25 +102,28 @@
 \begin{figure}[H]
 	\centering
 	\includegraphics[width=1\textwidth]{results/simulated_annealing.eps} % caminho até a figura "teste.png"
-	\caption{.} % legenda da figura
+	\caption{Caminho percorrido pelo método de otimização: \textit{Simulated Annealing}.} % legenda da figura
 	\label{fig:simulated_annealing}  % label da figura. ex: \label{fig:test}
 \end{figure}
 
 
 \section{Comparação entre os métodos}
 %% Basta preencher a tabela e colocar as figuras da trajetória de otimização e das curvas da regressão linear.
+A Figura \ref{fig:optimization_comparison} mostra uma comparação entre os caminhos percorridos por cada método de otimização.
 
 \begin{figure}[H]
 	\centering
 	\includegraphics[width=1\textwidth]{results/optimization_comparison.eps} % caminho até a figura "teste.png"
-	\caption{.} % legenda da figura
+	\caption{Caminhos percorridos por cada método de otimização.} % legenda da figura
 	\label{fig:optimization_comparison}  % label da figura. ex: \label{fig:test}
 \end{figure}
+
+A Figura \ref{fig:fit_comparison} mostra os pontos experimentais e as curvas de regressão linear obtidas por cada método.
 
 \begin{figure}[H]
 	\centering
 	\includegraphics[width=1\textwidth]{results/fit_comparison.eps} % caminho até a figura "teste.png"
-	\caption{.} % legenda da figura
+	\caption{Curvas de regressão linear obtidas por cada método de otimização.} % legenda da figura
 	\label{fig:fit_comparison}  % label da figura. ex: \label{fig:test}
 \end{figure}
 
@@ -104,10 +136,10 @@ A Tabela~\ref{tab:comp} mostra a comparação dos parâmetros da regressão line
 \begin{tabular}{|l|l|l|}
 \hline
 \multicolumn{1}{|c|}{\textbf{Método}}       & \multicolumn{1}{c|}{\textbf{$v_0$}} & \multicolumn{1}{c|}{\textbf{$f$}} \\ \hline
-MMQ                         & 0.0       & 0.0       \\ \hline
-Descida do gradiente        & 0.0       & 0.0       \\ \hline
-\emph{Hill climbing}        & 0.0       & 0.0       \\ \hline
-\emph{Simulated annealing}  & 0.0       & 0.0       \\ \hline
+MMQ                         & 0.433373       & -0.101021       \\ \hline
+Descida do gradiente        & 0.433371       & -0.101018       \\ \hline
+\emph{Hill climbing}        & 0.433411       & -0.101196       \\ \hline
+\emph{Simulated annealing}  & 0.433977       & -0.101345       \\ \hline
 \end{tabular}
 \end{table}
 
